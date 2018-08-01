@@ -1,4 +1,11 @@
-﻿##Check for "Reboot is required to continue"
+﻿<#
+
+To run this from CMD:
+"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -command "& {Set-ExecutionPolicy Bypass -Force -Confirm:$False ; (new-object Net.WebClient).DownloadString('https://goo.gl/hVciTi') | iex ; PSU-checkModule}"
+
+powershell.exe -command "& {(new-object Net.WebClient).DownloadString('https://goo.gl/hVciTi') | iex ; PSU-checkModule}"
+
+#>
 
 ##Checks important services needed to patch Windows, starts them if not running
 Function PSU-serviceCheck{
@@ -69,7 +76,7 @@ Function PSU-checkModule{
     ELSE{
         Write-Output "Verified the PowerShellGet module is installed"
     }
-    
+
     ##Nuget check
     $nugetTest = Get-Package -Name Nuget -EA 0
     IF($nugetTest -eq $Null){
@@ -148,7 +155,7 @@ Function PSU-installModule{
     $modVers = '1.5.2.6'
 
     ##Check for existing install of PSWindowsUpdate
-    $moduleTest = Get-Module -ListAvailable -Name PSWindowsUpdate 
+    $moduleTest = Get-Module -ListAvailable -Name PSWindowsUpdate
     IF($moduleTest -ne $Null){
         Remove-Module PSWindowsUpdate -Force -EA 0 | Out-Null
         Uninstall-Module PSWindowsUpdate -AllVersions -Force -EA 0 | Out-Null
@@ -164,7 +171,7 @@ Function PSU-installModule{
         ELSE{
             Write-Output "Verified there is no C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PSWindowsUpdate folder to delete"
         }
-            
+
     }
 
     Install-Module -Name PSWindowsUpdate -RequiredVersion $modVers -EA 0 -Confirm:$False -Force | Out-Null
@@ -200,7 +207,7 @@ Function PSU-denyPatchesLEGACY{
     #$urlTest = iwr https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt | % {$_.StatusCode}
     IF($denyList -ne $Null){
         Hide-WUUpdate -MicrosoftUpdate -HideStatus:$false -Verbose -Confirm:$false | Out-Null
-        Hide-WUUpdate -Category Driver -Confirm:$false 
+        Hide-WUUpdate -Category Driver -Confirm:$false
         Hide-WUUpdate -KBArticleID $denyList -Verbose -Confirm:$False
         Write-Output "Patches Denied: $denyList"
     }
@@ -238,7 +245,7 @@ Function PSU-pendingPatches{
 }
 
 ##Patches the machine
-Function PSU-beginPatching{
+Function PSU-installPatches{
     $dateTime = Get-Date
     Write-Output "===Patching Started==="
     Write-Output "Patch Start Time: $dateTime"
@@ -371,4 +378,14 @@ Function PSU-getPending{
 Function PSU-getInstalled{
     Write-Output "===Installed Updates==="
     Get-WUList -IsInstalled -MicrosoftUpdate
+}
+
+##Run all tasks to complete a successful patching session
+Function PSU-patchProcess{
+    PSU-versCheck
+    PSU-serviceCheck
+    PSU-checkModule
+    PSU-denyPatches
+    PSU-installPatches
+    PSU-getScore
 }
