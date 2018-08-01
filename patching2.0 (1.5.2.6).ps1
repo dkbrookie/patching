@@ -7,6 +7,8 @@ powershell.exe -command "& {(new-object Net.WebClient).DownloadString('https://g
 
 #>
 
+$ErrorActionPreference = "SilentlyContinue"
+
 ##Checks important services needed to patch Windows, starts them if not running
 Function PSU-serviceCheck{
     Write-Output "===Windows Update Service Check==="
@@ -225,7 +227,7 @@ Function PSU-denyPatches{
     $approveList = IWR -Uri "https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchApprove.txt" -EA 0
     $approveList = $approveList.Content
     IF(!$approveList){
-        Wirte-Output "There is no deny file located at https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt. Please generate the deny file before patching."
+        Write-Output "There is no deny file located at https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt. Please generate the deny file before patching."
     }
     ELSE{
         $pending = Get-WUList -MicrosoftUpdate | Select -ExpandProperty KB
