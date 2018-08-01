@@ -222,19 +222,20 @@ Function PSU-denyPatches{
     Write-Output "===Denied Patches==="
     $clientID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ClientID | Select -ExpandProperty ClientID
     $computerID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ID | Select -ExpandProperty ID
-    $approveList = IWR -Uri "https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchApprove.txt"
+    $approveList = IWR -Uri "https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchApprove.txt" -EA 0
     $approveList = $approveList.Content
-    $pending = Get-WUList -MicrosoftUpdate | Select -ExpandProperty KB
-    Hide-WUUpdate -MicrosoftUpdate -HideStatus:$false -Verbose -Confirm:$false | Out-Null
-    Hide-WUUpdate -Category Driver -Confirm:$false
-    ForEach($kb in $pending){
-        IF($approveList.Contains($kb) -eq $False){
-            Hide-WUUpdate -KBArticleID $kb -Verbose -Confirm:$False
-        }
+    IF(!$approveList){
+        Wirte-Output "There is no deny file located at https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt. Please generate the deny file before patching."
     }
     ELSE{
-        Write-Output "There is no deny file located at https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt. Please generate the deny file before patching."
-        Exit
+        $pending = Get-WUList -MicrosoftUpdate | Select -ExpandProperty KB
+        Hide-WUUpdate -MicrosoftUpdate -HideStatus:$false -Verbose -Confirm:$false | Out-Null
+        Hide-WUUpdate -Category Driver -Confirm:$false
+        ForEach($kb in $pending){
+            IF($approveList.Contains($kb) -eq $False){
+                Hide-WUUpdate -KBArticleID $kb -Verbose -Confirm:$False
+            }
+        }
     }
 }
 
