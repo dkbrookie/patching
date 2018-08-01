@@ -228,7 +228,7 @@ Function PSU-denyPatches{
     $approveList = $approveList.Content
     IF(!$approveList){
         Write-Output "There is no deny file located at https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt. Please generate the deny file before patching."
-        Exit
+        Break
     }
     ELSE{
         $pending = Get-WUList -MicrosoftUpdate | Select -ExpandProperty KB
