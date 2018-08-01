@@ -242,12 +242,6 @@ Function PSU-denyPatches{
     }
 }
 
-##Displays a list of pending patches
-Function PSU-pendingPatches{
-    Write-Host "===Pending Patches==="
-    Get-WindowsUpdate -MicrosoftUpdate
-}
-
 ##Patches the machine
 Function PSU-installPatches{
     $dateTime = Get-Date
@@ -277,6 +271,8 @@ Function PSU-repairUpdates{
     ##Delete Windows Updates downloads & cache
     Get-ChildItem "C:\Windows\system32\catroot2\*" -Recurse | Remove-Item -Force -EA 0 -Confirm:$False -Recurse
     Get-ChildItem "C:\Windows\SoftwareDistribution\*" -Recurse | Remove-Item -Force -EA 0 -Confirm:$False -Recurse
+
+    ##Reset proxy
     netsh winhttp reset proxy
 
     ##Reset BITS
@@ -320,12 +316,21 @@ Function PSU-repairUpdates{
     regsvr32.exe wucltux.dll /s
     regsvr32.exe muweb.dll /s
     regsvr32.exe wuwebv.dll /s
+
+    ##Reset winsock
     netsh winsock reset
 
     ##Start update services
     Start-Service bits
     Start-Service cryptsvc
     Start-Service wuauserv
+
+    ##Reset Windows update certifcate
+    #$cert = (gci -Path Cert:\LocalMachine\AuthRoot\97817950D81C9670CC34D809CF794431367EF474);
+    #$filepath = "c:\bin\GTE.cer";
+    #Export-Certificate -Cert $cert -FilePath $filepath;
+    #$cert | Remove-Item;
+    #Import-Certificate -CertStoreLocation Cert:\LocalMachine\AuthRoot -FilePath $filepath;
 }
 
 ##Get total patching %
