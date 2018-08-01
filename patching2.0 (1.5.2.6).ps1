@@ -3,7 +3,7 @@
 To run this from CMD:
 "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -command "& {Set-ExecutionPolicy Bypass -Force -Confirm:$False ; (new-object Net.WebClient).DownloadString('https://goo.gl/hVciTi') | iex ; PSU-checkModule}"
 
-powershell.exe -command "& {(new-object Net.WebClient).DownloadString('https://goo.gl/hVciTi') | iex ; PSU-checkModule}"
+powershell.exe -command "& {(new-object Net.WebClient).DownloadString('https://goo.gl/hVciTi') | iex ; PSU-patchProcess}"
 
 #>
 
@@ -227,7 +227,7 @@ Function PSU-denyPatches{
     $approveList = IWR -Uri "https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchApprove.txt" -EA 0
     $approveList = $approveList.Content
     IF(!$approveList){
-        Write-Output "There is no deny file located at https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt. Please generate the deny file before patching."
+        Write-Output "There is no deny file located at https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchApprove.txt. Please generate the deny file before patching."
         Break
     }
     ELSE{
@@ -374,7 +374,6 @@ Function PSU-getScore{
 ##Get a list of pending patches
 Function PSU-getPending{
     Write-Output "===Pending Updates==="
-    PSU-denyPatches
     Get-WUList -MicrosoftUpdate | Where-Object {$_.Status -notlike "*H*"}
 }
 
