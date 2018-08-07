@@ -409,9 +409,14 @@ Function PSU-rebootStatus{
 
 ##Output list of installed updates into a CSV at C:\Windows\LTSVc\Patching\[companyid]-[computerid]-[computername]-installedUpdates.csv
 Function PSU-installedToCSV{
+    Write-Output "===Exporting Installed Patches==="
     $computerName = $env:computername
     $clientID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ClientID | Select -ExpandProperty ClientID
     $computerID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ID | Select -ExpandProperty ID
+    $csvTest = Test-Path "C:\Windows\LTSvc\Patching\$computerName-$clientID-$computerID-installedPatches.csv" -PathType Leaf
+    IF($csvTest){
+      Remove-Item -Path "C:\Windows\LTSvc\Patching\$computerName-$clientID-$computerID-installedPatches.csv" -Force -EA 0
+    }
     PSU-getInstalled | Select-Object ComputerName, Status, KB, Title | Export-Csv -Path "C:\Windows\LTSvc\Patching\$computerName-$clientID-$computerID-installedPatches.csv" -Encoding ascii -NoTypeInformation
 }
 
