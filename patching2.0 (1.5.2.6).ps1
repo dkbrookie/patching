@@ -393,6 +393,16 @@ Function PSU-unhideAll{
    Hide-WUUpdate -MicrosoftUpdate -HideStatus:$false -Verbose -Confirm:$false
 }
 
+Function PSU-rebootStatus{
+    $status = Get-WURebootStatus
+    IF($status -eq "localhost: Reboot is not Required."){
+        Write-Output "No reboot pending"
+    }
+    ELSE{
+        Write-Output "Reboot pending"
+    }
+}
+
 
 ##Run all tasks to complete a successful patching session
 Function PSU-patchProcess{
@@ -401,5 +411,4 @@ Function PSU-patchProcess{
     PSU-checkModule
     PSU-denyPatches
     PSU-installPatches
-    PSU-getScore
 }
