@@ -413,6 +413,10 @@ Function PSU-installedToCSV{
     $computerName = $env:computername
     $clientID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ClientID | Select -ExpandProperty ClientID
     $computerID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ID | Select -ExpandProperty ID
+    $dirTest = Test-Path "$env:windir\LTSvc\Patching"
+    IF(!$dirTest){
+        New-Item "$env:windir\LTSvc\Patching" -Type Directory | Out-Null
+    }
     $csvTest = Test-Path "C:\Windows\LTSvc\Patching\$computerName-$clientID-$computerID-installedPatches.csv" -PathType Leaf
     IF($csvTest){
       Remove-Item -Path "C:\Windows\LTSvc\Patching\$computerName-$clientID-$computerID-installedPatches.csv" -Force -EA 0
