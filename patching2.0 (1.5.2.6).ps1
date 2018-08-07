@@ -104,16 +104,16 @@ Function PSU-checkModule{
 
 ##Installs the PackageManagement Powershell module
 Function PSU-installPackage{
-    $dirTest = Test-Path "$env:windir\LTSvc\Patching"
+    $dirTest = Test-Path "C:\Windows\LTSvc\Patching"
     IF(!$dirTest){
-        New-Item "$env:windir\LTSvc\Patching" -Type Directory | Out-Null
+        New-Item "C:\Windows\LTSvc\Patching" -Type Directory | Out-Null
     }
-    $dirTest = Test-Path "$env:windir\System32\WindowsPowerShell\v1.0\Modules\PackageManagement"
+    $dirTest = Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PackageManagement"
     IF(!$dirTest){
-        Invoke-WebRequest -Uri "https://support.dkbinnovative.com/labtech/transfer/patching/PackageManagement/1.1.7.2.zip" -Outfile "$env:windir\LTSVc\Patching\1.1.7.2.zip"
+        Invoke-WebRequest -Uri "https://support.dkbinnovative.com/labtech/transfer/patching/PackageManagement/1.1.7.2.zip" -Outfile "C:\Windows\LTSVc\Patching\1.1.7.2.zip"
         Add-Type -Assembly "system.io.compression.filesystem"
-        [io.compression.zipfile]::ExtractToDirectory("$env:windir\LTSVc\Patching\1.1.7.2.zip", "$env:windir\System32\WindowsPowerShell\v1.0\Modules")
-        $dirTest = Test-Path "$env:windir\System32\WindowsPowerShell\v1.0\Modules\PackageManagement"
+        [io.compression.zipfile]::ExtractToDirectory("C:\Windows\LTSVc\Patching\1.1.7.2.zip", "C:\Windows\System32\WindowsPowerShell\v1.0\Modules")
+        $dirTest = Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PackageManagement"
         IF(!$dirTest){
             Write-Output "!ERRMOD01: Failed to install the PackageManagement module"
         }
@@ -125,16 +125,16 @@ Function PSU-installPackage{
 
 ##Installs the PowerhShellGet Powershell module
 Function PSU-installGet{
-    $dirTest = Test-Path "$env:windir\LTSvc\Patching"
+    $dirTest = Test-Path "C:\Windows\LTSvc\Patching"
     IF(!$dirTest){
-        New-Item "$env:windir\LTSvc\Patching" -Type Directory | Out-Null
+        New-Item "C:\Windows\LTSvc\Patching" -Type Directory | Out-Null
     }
-    $dirTest = Test-Path "$env:windir\System32\WindowsPowerShell\v1.0\Modules\PowerShellGet"
+    $dirTest = Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PowerShellGet"
     IF(!$dirTest){
-        Invoke-WebRequest -Uri "https://support.dkbinnovative.com/labtech/transfer/patching/PowerShellGet/1.6.6.zip" -Outfile "$env:windir\LTSVc\Patching\1.6.6.zip"
+        Invoke-WebRequest -Uri "https://support.dkbinnovative.com/labtech/transfer/patching/PowerShellGet/1.6.6.zip" -Outfile "C:\Windows\LTSVc\Patching\1.6.6.zip"
         Add-Type -Assembly "system.io.compression.filesystem"
-        [io.compression.zipfile]::ExtractToDirectory("$env:windir\LTSVc\Patching\1.6.6.zip", "$env:windir\System32\WindowsPowerShell\v1.0\Modules")
-        $dirTest = Test-Path "$env:windir\System32\WindowsPowerShell\v1.0\Modules\PowerShellGet"
+        [io.compression.zipfile]::ExtractToDirectory("C:\Windows\LTSVc\Patching\1.6.6.zip", "C:\Windows\System32\WindowsPowerShell\v1.0\Modules")
+        $dirTest = Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PowerShellGet"
         IF(!$dirTest){
             Write-Output "!ERRMOD02: Failed to installed the PowerShellGet module"
         }
