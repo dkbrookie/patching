@@ -397,3 +397,6 @@ Function PSU-patchProcess{
     PSU-installPatches
     PSU-getScore
 }
+ Function PSU-unhideAll{
+    Hide-WUUpdate -MicrosoftUpdate -HideStatus:$false -Verbose -Confirm:$false
+ }
