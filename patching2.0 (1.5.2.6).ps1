@@ -5,6 +5,10 @@ To run this from CMD:
 
 powershell.exe -command "& {(new-object Net.WebClient).DownloadString('https://goo.gl/hVciTi') | iex ; PSU-patchProcess}"
 
+powershell.exe -command "& {(new-object Net.WebClient).DownloadString('https://goo.gl/hVciTi') | iex ; PSU-checkModule ; PSU-unhideAll ; PSU-installPatches}"
+
+powershell.exe -command "& {(new-object Net.WebClient).DownloadString('https://goo.gl/hVciTi') | iex ; PSU-getInstalled | Select-Object ComputerName, Status, KB, Title | Export-Csv -Path c:\RECORDER-installedPatches.csv -Encoding ascii -NoTypeInformation}"
+
 #>
 
 $ErrorActionPreference = "SilentlyContinue"
@@ -403,6 +407,13 @@ Function PSU-rebootStatus{
     }
 }
 
+##Output list of installed updates into a CSV at C:\Windows\LTSVc\Patching\[companyid]-[computerid]-[computername]-installedUpdates.csv
+Function PSU-installedToCSV{
+    $computerName = $env:computername
+    $clientID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ClientID | Select -ExpandProperty ClientID
+    $computerID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ID | Select -ExpandProperty ID
+    PSU-getInstalled | Select-Object ComputerName, Status, KB, Title | Export-Csv -Path "C:\Windows\LTSvc\Patching\$computerName-$clientID-$computerID-installedPatches.csv" -Encoding ascii -NoTypeInformation
+}
 
 ##Run all tasks to complete a successful patching session
 Function PSU-patchProcess{
