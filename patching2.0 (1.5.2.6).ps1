@@ -22,7 +22,7 @@ Function PSU-serviceCheck{
         Start-Sleep -Seconds 30
         $wuau = Get-Service -Name $service
         IF($wuau.Status -ne 'Running'){
-            Write-Output "Failed to start the wuauserv service, unable to patch this machine"
+            Write-Output "!ERRWU01: Failed to start the wuauserv service, unable to patch this machine"
             Exit
         }
         ELSE{
@@ -44,7 +44,7 @@ Function PSU-versCheck{
         Write-Output "Verified powershell version is sufficient"
     }
     ELSE{
-        Write-Output "Powershell version is insufficient, must be 3 or higher. Current version is $vers"
+        Write-Output "!ERRPS01: Powershell version is insufficient, must be 3 or higher. Current version is $vers"
         Exit
     }
 }
@@ -111,7 +111,7 @@ Function PSU-installPackage{
         [io.compression.zipfile]::ExtractToDirectory("$env:windir\LTSVc\Patching\1.1.7.2.zip", "$env:windir\System32\WindowsPowerShell\v1.0\Modules")
         $dirTest = Test-Path "$env:windir\System32\WindowsPowerShell\v1.0\Modules\PackageManagement"
         IF(!$dirTest){
-            Write-Output "Failed to installed the PackageManagement module"
+            Write-Output "!ERRMOD01: Failed to install the PackageManagement module"
         }
         ELSE{
             Write-Output "Successfully installed the PackageManagement module"
@@ -132,7 +132,7 @@ Function PSU-installGet{
         [io.compression.zipfile]::ExtractToDirectory("$env:windir\LTSVc\Patching\1.6.6.zip", "$env:windir\System32\WindowsPowerShell\v1.0\Modules")
         $dirTest = Test-Path "$env:windir\System32\WindowsPowerShell\v1.0\Modules\PowerShellGet"
         IF(!$dirTest){
-            Write-Output "Failed to installed the PowerShellGet module"
+            Write-Output "!ERRMOD02: Failed to installed the PowerShellGet module"
         }
         ELSE{
             Write-Output "Successfully installed the PowerShellGet module"
@@ -145,7 +145,7 @@ Function PSU-installNuget{
     Install-Package -Name NuGet -Force -EA 0 -Confirm:$False | Out-Null
     $nugetTest = Get-Package -Name Nuget -EA 0
     IF($nugetTest -eq $Null){
-        Write-Output "Failed to install the Nuget module"
+        Write-Output "!ERRMOD03: Failed to install the Nuget module"
     }
     ELSE{
         Write-Output "Nuget module successfully installed"
@@ -163,7 +163,7 @@ Function PSU-installModule{
         Uninstall-Module PSWindowsUpdate -AllVersions -Force -EA 0 | Out-Null
         $moduleTest = Get-Module -ListAvailable -Name PSWindowsUpdate
         IF($moduleTest -ne $Null){
-            Write-Output "Failed to remove the PSWindowsUpdate module"
+            Write-Output "!ERRMOD04: Failed to remove the PSWindowsUpdate module"
         }
         ##Verify the PSWindowsUpdate dir removed during uninstall
         $psDirTest = Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PSWindowsUpdate"
@@ -179,7 +179,7 @@ Function PSU-installModule{
     Install-Module -Name PSWindowsUpdate -RequiredVersion $modVers -EA 0 -Confirm:$False -Force | Out-Null
     $verifyInstall = Get-Module -ListAvailable -Name PSWindowsUpdate
     IF($verifyInstall -eq $Null){
-        Write-Output "PSWindowsUpdate install failed."
+        Write-Output "!ERRMOD05: PSWindowsUpdate install failed."
     }
     ELSE{
         Write-Output "PSWindowsUpdate module successfully installed."
@@ -196,7 +196,7 @@ Function PSU-lastSuccess{
     $lastSuccess = $history.Date | Sort-Object Descending | Select-Object -First 1
 
     IF($lastSuccess -gt $dayCount){
-        "No patches have been installed or even attempted for $days+ days. This usually implies paching issues. Please verify this machine is scheduled for regular patching."
+        "No patches have been installed or attempted for $days+ days. This usually implies paching issues. Please verify this machine is scheduled for regular patching."
     }
 }
 
@@ -214,7 +214,7 @@ Function PSU-denyPatchesLEGACY{
         Write-Output "Patches Denied: $denyList"
     }
     ELSE{
-        Write-Output "There is no deny file located at https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt. Please generate the deny file before patching."
+        Write-Output "!ERRDE01: There is no deny file located at https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt. Please generate the deny file before patching."
         Exit
     }
 }
@@ -227,7 +227,7 @@ Function PSU-denyPatches{
     $approveList = IWR -Uri "https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchApprove.txt" -EA 0
     $approveList = $approveList.Content
     IF(!$approveList){
-        Write-Output "There is no deny file located at https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchApprove.txt. Please generate the deny file before patching."
+        Write-Output "!ERRDE01: There is no deny file located at https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchApprove.txt. Please generate the deny file before patching."
         Break
     }
     ELSE{
@@ -353,7 +353,7 @@ Function PSU-getScore{
     ##Search for the PSWU module
     $modInstalled = Get-Module -ListAvailable -Name PSWindowsUpdate
     IF ($modInstalled -eq $Null){
-        Write-Host "PSWU Missing"
+        Write-Host "!ERRMOD05: PSWU Missing"
     }
     ELSE{
         ##Import PSWU module
@@ -388,6 +388,12 @@ Function PSU-getInstalled{
     Get-WUList -IsInstalled -MicrosoftUpdate
 }
 
+##Unhide all patches
+Function PSU-unhideAll{
+   Hide-WUUpdate -MicrosoftUpdate -HideStatus:$false -Verbose -Confirm:$false
+}
+
+
 ##Run all tasks to complete a successful patching session
 Function PSU-patchProcess{
     PSU-versCheck
@@ -397,6 +403,3 @@ Function PSU-patchProcess{
     PSU-installPatches
     PSU-getScore
 }
- Function PSU-unhideAll{
-    Hide-WUUpdate -MicrosoftUpdate -HideStatus:$false -Verbose -Confirm:$false
- }
