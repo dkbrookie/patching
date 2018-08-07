@@ -395,7 +395,7 @@ Function PSU-unhideAll{
 
 Function PSU-rebootStatus{
     $status = Get-WURebootStatus
-    IF($status -eq "localhost: Reboot is not Required."){
+    IF($status -eq "Reboot is not Required."){
         Write-Output "No reboot pending"
     }
     ELSE{
