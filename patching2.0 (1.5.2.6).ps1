@@ -339,7 +339,7 @@ Function PSU-repairUpdates{
 
 ##Get total patching %
 Function PSU-getScore{
-    IF ($mute -eq $Null){
+    IF (!$mute){
         Write-Output "===Patching Percentage==="
     }
     $ErrorActionPreference = 'SilentlyContinue'
@@ -350,33 +350,26 @@ Function PSU-getScore{
         Start-Service wuauserv
     }
 
+    ##Ensures Powershell is looking in the modules dir in Program Files for available modules
     IF($env:PSModulePath -notlike "*c:\Program Files\WindowsPowerShell\Modules*"){
         $env:PSModulePath = $env:PSModulePath + ";c:\Program Files\WindowsPowerShell\Modules"
     }
 
-    ##Search for the PSWU module
-    $modInstalled = Get-Module -ListAvailable -Name PSWindowsUpdate
-    IF ($modInstalled -eq $Null){
-        Write-Host "!ERRMOD05: PSWU Missing"
+    ##Import PSWU module
+    Import-Module PSWindowsUpdate | Out-Null
+    Add-WUServiceManager -ServiceID 7971f918-a847-4430-9279-4a52d1efe18d -Confirm:$False | Out-Null
+    ##Set vars for how many updates are installed and how many are missing
+    $installedPS = @(Get-WUList -IsInstalled -MicrosoftUpdate | Where {$_.kb -ne ""}).count
+    $missing = @(Get-WUList -MicrosoftUpdate | Where-Object {$_.Status -notlike "*H*"}).count
+
+    IF ($installedPS -eq 0 -and $missing -eq 0 -or $installedPS -eq $Null -and $missing -eq $Null){
+        Write-Output 'No Data Available'
     }
     ELSE{
-        ##Import PSWU module
-        Import-Module PSWindowsUpdate | Out-Null
-        Add-WUServiceManager -ServiceID 7971f918-a847-4430-9279-4a52d1efe18d -Confirm:$false | Out-Null
-
-        ##Set vars for how many updates are installed and how many are missing
-        $installedPS = @(Get-WUList -IsInstalled -MicrosoftUpdate | Where {$_.kb -ne ""}).count
-        $missing = @(Get-WUList -MicrosoftUpdate | Where-Object {$_.Status -notlike "*H*"}).count
-
-        IF ($installedPS -eq 0 -and $missing -eq 0 -or $installedPS -eq $Null -and $missing -eq $Null){
-            Write-Host '0'
-        }
-        ELSE{
-            ##Calculate how many are missing by dividing the total installed by the total not installed
-            $percent = ($InstalledPS / ($InstalledPS + $missing) * 100)
-            ##Output the percentage
-            "{0:N2}" -f $percent
-        }
+        ##Calculate how many are missing by dividing the total installed by the total not installed
+        $percent = ($InstalledPS / ($InstalledPS + $missing) * 100)
+        ##Output the percentage
+        "{0:N2}" -f $percent
     }
 }
 
@@ -394,7 +387,8 @@ Function PSU-getInstalled{
 
 ##Unhide all patches
 Function PSU-unhideAll{
-   Hide-WUUpdate -MicrosoftUpdate -HideStatus:$false -Verbose -Confirm:$false
+    Write-Output "===Unhide Updates==="
+    Hide-WUUpdate -MicrosoftUpdate -HideStatus:$false -Verbose -Confirm:$false
 }
 
 Function PSU-rebootStatus{
