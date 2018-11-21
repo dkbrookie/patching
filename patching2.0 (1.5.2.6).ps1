@@ -110,7 +110,7 @@ Function PSU-installPackage{
     }
     $dirTest = Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PackageManagement"
     IF(!$dirTest){
-        Invoke-WebRequest -Uri "https://support.dkbinnovative.com/labtech/transfer/patching/PackageManagement/1.1.7.2.zip" -Outfile "C:\Windows\LTSVc\Patching\1.1.7.2.zip"
+        Invoke-WebRequest -Uri "https://$dkbURL/labtech/transfer/patching/PackageManagement/1.1.7.2.zip" -Outfile "C:\Windows\LTSVc\Patching\1.1.7.2.zip"
         Add-Type -Assembly "system.io.compression.filesystem"
         [io.compression.zipfile]::ExtractToDirectory("C:\Windows\LTSVc\Patching\1.1.7.2.zip", "C:\Windows\System32\WindowsPowerShell\v1.0\Modules")
         $dirTest = Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PackageManagement"
@@ -131,7 +131,7 @@ Function PSU-installGet{
     }
     $dirTest = Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PowerShellGet"
     IF(!$dirTest){
-        Invoke-WebRequest -Uri "https://support.dkbinnovative.com/labtech/transfer/patching/PowerShellGet/1.6.6.zip" -Outfile "C:\Windows\LTSVc\Patching\1.6.6.zip"
+        Invoke-WebRequest -Uri "https://$dkbURL/labtech/transfer/patching/PowerShellGet/1.6.6.zip" -Outfile "C:\Windows\LTSVc\Patching\1.6.6.zip"
         Add-Type -Assembly "system.io.compression.filesystem"
         [io.compression.zipfile]::ExtractToDirectory("C:\Windows\LTSVc\Patching\1.6.6.zip", "C:\Windows\System32\WindowsPowerShell\v1.0\Modules")
         $dirTest = Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PowerShellGet"
@@ -209,8 +209,8 @@ Function PSU-denyPatchesLEGACY{
     Write-Output "===Denied Patches==="
     $clientID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ClientID | Select -ExpandProperty ClientID
     $computerID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ID | Select -ExpandProperty ID
-    $denyList = (new-object Net.WebClient).DownloadString("https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt") | iex
-    #$urlTest = iwr https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt | % {$_.StatusCode}
+    $denyList = (new-object Net.WebClient).DownloadString("https://$dkbURL/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt") | iex
+    #$urlTest = iwr https://$dkbURL/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt | % {$_.StatusCode}
     IF($denyList -ne $Null){
         Hide-WUUpdate -MicrosoftUpdate -HideStatus:$false -Verbose -Confirm:$false | Out-Null
         Hide-WUUpdate -Category Driver -Confirm:$false
@@ -218,7 +218,7 @@ Function PSU-denyPatchesLEGACY{
         Write-Output "Patches Denied: $denyList"
     }
     ELSE{
-        Write-Output "!ERRDE01: There is no deny file located at https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt. Please generate the deny file before patching."
+        Write-Output "!ERRDE01: There is no deny file located at https://$dkbURL/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt. Please generate the deny file before patching."
         Exit
     }
 }
@@ -228,10 +228,10 @@ Function PSU-denyPatches{
     Write-Output "===Denied Patches==="
     $clientID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ClientID | Select -ExpandProperty ClientID
     $computerID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ID | Select -ExpandProperty ID
-    $approveList = IWR -Uri "https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchApprove.txt" -EA 0
+    $approveList = IWR -Uri "https://$dkbURL/labtech/transfer/patching/$clientID/$computerID/patchApprove.txt" -EA 0
     $approveList = $approveList.Content
     IF(!$approveList){
-        Write-Output "!ERRDE01: There is no deny file located at https://support.dkbinnovative.com/labtech/transfer/patching/$clientID/$computerID/patchApprove.txt. Please generate the deny file before patching."
+        Write-Output "!ERRDE01: There is no deny file located at https://$dkbURL/labtech/transfer/patching/$clientID/$computerID/patchApprove.txt. Please generate the deny file before patching."
         Break
     }
     ELSE{
