@@ -1,4 +1,4 @@
-﻿<#
+<#
 
 To run this from CMD:
 "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -command "& {Set-ExecutionPolicy Bypass -Force -Confirm:$False ; (new-object Net.WebClient).DownloadString('https://goo.gl/hVciTi') | iex ; PSU-checkModule}"
@@ -9,152 +9,142 @@ powershell.exe -command "& {(new-object Net.WebClient).DownloadString('https://g
 
 powershell.exe -command "& {(new-object Net.WebClient).DownloadString('https://goo.gl/hVciTi') | iex ; PSU-getInstalled | Select-Object ComputerName, Status, KB, Title | Export-Csv -Path c:\RECORDER-installedPatches.csv -Encoding ascii -NoTypeInformation}"
 
-#>
+#>asd
 
 $ErrorActionPreference = "SilentlyContinue"
+$patchComponentDir = "$env:windir\LTSVc\Patching"
 
 ##Checks important services needed to patch Windows, starts them if not running
 Function PSU-serviceCheck{
     Write-Output "===Windows Update Service Check==="
-##Verify the wuauserv service is running and the startup type is set to automatic
-$service = 'wuauserv'
-$wuau = Get-Service -Name $service
-$servStartus1 = $wuau.Status
-$servStart1 = $wuau.StartType
-IF($wuau.Status -ne 'Running' -or $wuau.StartType -ne 'Automatic'){
-    Set-Service -Name $service -StartupType Automatic -Status Running
-    Start-Sleep -Seconds 30
+    ##Verify the wuauserv service is running and the startup type is set to automatic
+    $service = 'wuauserv'
     $wuau = Get-Service -Name $service
-    IF($wuau.Status -ne 'Running'){
-        Write-Output "!ERRWU01: Failed to start the wuauserv service, unable to patch this machine"
-        Exit
-    }
-    ELSE{
-        $servStatus2 = $wuau.Status
-        $servStart2 = $wuau.StartType
-        Write-Output "The $service service was in the $servStartus1 state, and the startup type was set to $servStart1. Automation has set the status to $servStatus2, and the startup type to $servStart2."
-    }
-}
-ELSE{
-    Write-Output "Verified the $service service is running"
-}
-}
+    $servStartus1 = $wuau.Status
+    $servStart1 = $wuau.StartType
+    IF ($wuau.Status -ne 'Running' -or $wuau.StartType -ne 'Automatic') {
+        Set-Service -Name $service -StartupType Automatic -Status Running
+        Start-Sleep -Seconds 30
+        $wuau = Get-Service -Name $service
+        IF ($wuau.Status -ne 'Running') {
+            Write-Output "!ERRWU01: Failed to start the wuauserv service, unable to patch this machine"
+            Exit
+        } ELSE {
+            $servStatus2 = $wuau.Status
+            $servStart2 = $wuau.StartType
+            Write-Output "The $service service was in the $servStartus1 state, and the startup type was set to $servStart1. Automation has set the status to $servStatus2, and the startup type to $servStart2."
+        }#End Else
+    } ELSE {
+        Write-Output "Verified the $service service is running"
+    }#End Else
+}#End Function PSU-serviceCheck
 
 ##Checks the version of Powershell, need powershell 3+ for this script to work
 Function PSU-versCheck{
     Write-Output "===Powershell Check==="
-    $vers = $PSVersionTable.PSVersion | Select -ExpandProperty Major
+    $vers = $PSVersionTable.PSVersion | Select-Object -ExpandProperty Major
     IF($vers -ge 3){
         Write-Output "Verified powershell version is sufficient"
     }
     ELSE{
         Write-Output "!ERRPS01: Powershell version is insufficient, must be 3 or higher. Current version is $vers"
         Exit
-    }
-}
+    }#End Else
+}#End Function versCheck
 
 ##Checks for all needed Powershell modules for patching to function
 Function PSU-checkModule{
     Write-Output "===Module Check==="
     ##Available module dir check
-    IF($env:PSModulePath -notlike "*c:\Program Files\WindowsPowerShell\Modules*"){
+    IF ($env:PSModulePath -notlike "*c:\Program Files\WindowsPowerShell\Modules*") {
         $env:PSModulePath = $env:PSModulePath + ";c:\Program Files\WindowsPowerShell\Modules"
         Write-Output "Added 'c:\Program Files\WindowsPowerShell\Modules' to available module dirs"
-    }
-    ELSE{
+    } ELSE {
         Write-Output "Verified 'c:\Program Files\WindowsPowerShell\Modules' is added to available module dirs"
-    }
+    }#End Else
 
     ##PackeManagement check
-    $packageTest = Get-Module -ListAvailable -Name PackageManagement
-    IF($packageTest -eq $Null){
+    IF (!(Get-Module -ListAvailable -Name PackageManagement)) {
         PSU-installPackage
-    }
-    ELSE{
+    } ELSE {
         Write-Output "Verified the PackageManagement module is installed"
-    }
+    }#End Else
 
     ##PowerShellGet check
-    $getTest = Get-Module -ListAvailable -Name PowerShellGet
-    IF($getTest -eq $Null){
+    IF (!(Get-Module -ListAvailable -Name PowerShellGet)) {
         PSU-installGet
-    }
-    ELSE{
+    } ELSE {
         Write-Output "Verified the PowerShellGet module is installed"
-    }
+    }#End Else
 
     ##Nuget check
-    $nugetTest = Get-Package -Name Nuget -EA 0
-    IF($nugetTest -eq $Null){
+    IF (!(Get-Package -Name Nuget )) {
         PSU-installNuget
-    }
-    ELSE{
+    } ELSE {
         Write-Output "Verified the Nuget module is installed"
-    }
+    }#End Else
 
     ##PSWindowsUpdate check
-    $moduleTest = Get-Module -ListAvailable -Name PSWindowsUpdate
-    IF(($moduleTest).Count -gt 1 -or $moduleTest -eq $Null -or $moduleTest.Version -ne '1.5.2.6'){
+    $moduleCheck = Get-Module -ListAvailable -Name PSWindowsUpdate
+    IF (($moduleCheck).Count -gt 1 -or $moduleCheck -eq $Null -or $moduleCheck.Version -ne '1.5.2.6') {
         PSU-installModule
-    }
-    ELSE{
+    } ELSE {
         Write-Output "Verified PSWindowsUpdate is installed"
-    }
-}
+    }#End Else
+}#End Function PSU-checkModule
 
 ##Installs the PackageManagement Powershell module
 Function PSU-installPackage{
-    $dirTest = Test-Path "C:\Windows\LTSvc\Patching"
-    IF(!$dirTest){
-        New-Item "C:\Windows\LTSvc\Patching" -Type Directory | Out-Null
+    IF (!(Test-Path $patchComponentDir)) {
+        New-Item $patchComponentDir -Type Directory | Out-Null
     }
-    $dirTest = Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PackageManagement"
-    IF(!$dirTest){
-        Invoke-WebRequest -Uri "https://$dkbURL/labtech/transfer/patching/PackageManagement/1.1.7.2.zip" -Outfile "C:\Windows\LTSVc\Patching\1.1.7.2.zip"
-        Add-Type -Assembly "system.io.compression.filesystem"
-        [io.compression.zipfile]::ExtractToDirectory("C:\Windows\LTSVc\Patching\1.1.7.2.zip", "C:\Windows\System32\WindowsPowerShell\v1.0\Modules")
-        $dirTest = Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PackageManagement"
-        IF(!$dirTest){
-            Write-Output "!ERRMOD01: Failed to install the PackageManagement module"
-        }
-        ELSE{
+
+    $packageDir = "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PackageManagement"
+    Try{
+        IF (!($packageDir)) {
+            Invoke-WebRequest -Uri "https://$dkbURL/labtech/transfer/patching/PackageManagement/1.1.7.2.zip" -Outfile "$patchComponentDir\1.1.7.2.zip"
+            Add-Type -Assembly "system.io.compression.filesystem"
+            [io.compression.zipfile]::ExtractToDirectory("$patchComponentDir\1.1.7.2.zip", "C:\Windows\System32\WindowsPowerShell\v1.0\Modules")
             Write-Output "Successfully installed the PackageManagement module"
         }
-    }
-}
+    }#End Try
+
+    Catch{
+        Write-Warning "There was a problem installing the PackageManagement module"
+    }#End Catch
+}#End Function PSU-installPackage
 
 ##Installs the PowerhShellGet Powershell module
 Function PSU-installGet{
-    $dirTest = Test-Path "C:\Windows\LTSvc\Patching"
-    IF(!$dirTest){
-        New-Item "C:\Windows\LTSvc\Patching" -Type Directory | Out-Null
+    IF(!$patchComponentDir){
+        New-Item $patchComponentDir -Type Directory | Out-Null
     }
-    $dirTest = Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PowerShellGet"
-    IF(!$dirTest){
-        Invoke-WebRequest -Uri "https://$dkbURL/labtech/transfer/patching/PowerShellGet/1.6.6.zip" -Outfile "C:\Windows\LTSVc\Patching\1.6.6.zip"
-        Add-Type -Assembly "system.io.compression.filesystem"
-        [io.compression.zipfile]::ExtractToDirectory("C:\Windows\LTSVc\Patching\1.6.6.zip", "C:\Windows\System32\WindowsPowerShell\v1.0\Modules")
-        $dirTest = Test-Path "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PowerShellGet"
-        IF(!$dirTest){
-            Write-Output "!ERRMOD02: Failed to installed the PowerShellGet module"
-        }
-        ELSE{
+    $powerShelGetDir = "C:\Windows\System32\WindowsPowerShell\v1.0\Modules\PowerShellGet"
+    IF (!($powerShelGetDir)) {
+        Try{
+            Invoke-WebRequest -Uri "https://$dkbURL/labtech/transfer/patching/PowerShellGet/1.6.6.zip" -Outfile "$patchComponentDir\1.6.6.zip"
+            Add-Type -Assembly "system.io.compression.filesystem"
+            [io.compression.zipfile]::ExtractToDirectory("$patchComponentDir\1.6.6.zip", "C:\Windows\System32\WindowsPowerShell\v1.0\Modules")
             Write-Output "Successfully installed the PowerShellGet module"
-        }
-    }
-}
+        }#End Try
+
+        Catch{
+            Write-Warning "There was an issue trying to install the PowershellGet module"
+        }#End Catch
+    }#End If
+}#End Function PSU-installGet
 
 ##Install the Nuget Powershell module
 Function PSU-installNuget{
-    Install-Package -Name NuGet -Force -EA 0 -Confirm:$False | Out-Null
-    $nugetTest = Get-Package -Name Nuget -EA 0
-    IF($nugetTest -eq $Null){
-        Write-Output "!ERRMOD03: Failed to install the Nuget module"
-    }
-    ELSE{
+    Try{
+        Install-Package -Name NuGet -Force -EA 0 -Confirm:$False | Out-Null
         Write-Output "Nuget module successfully installed"
-    }
-}
+    }#End Try
+
+    Catch{
+        Write-Warning "There was a problem installing the Nuget module"
+    }#End Catch
+}#End Function PSU-installNuget
 
 ##Installs the PSWindowsUpdate Powershell module
 Function PSU-installModule{
@@ -196,7 +186,7 @@ Function PSU-lastSuccess{
     $days = 30
     $currentDate = Get-Date
     $dayCount = (Get-Date).adddays($days)
-    $history = Get-WUHistory | Select Result,Date,Title
+    $history = Get-WUHistory | Select-Object Result,Date,Title
     $lastSuccess = $history.Date | Sort-Object Descending | Select-Object -First 1
 
     IF($lastSuccess -gt $dayCount){
@@ -207,9 +197,9 @@ Function PSU-lastSuccess{
 ##Pulls list of denied patches from the Automate server
 Function PSU-denyPatchesLEGACY{
     Write-Output "===Denied Patches==="
-    $clientID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ClientID | Select -ExpandProperty ClientID
-    $computerID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ID | Select -ExpandProperty ID
-    $denyList = (new-object Net.WebClient).DownloadString("https://$dkbURL/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt") | iex
+    $clientID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ClientID | Select-Object -ExpandProperty ClientID
+    $computerID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ID | Select-Object -ExpandProperty ID
+    $denyList = (new-object Net.WebClient).DownloadString("https://$dkbURL/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt") | Invoke-Expression
     #$urlTest = iwr https://$dkbURL/labtech/transfer/patching/$clientID/$computerID/patchDeny.txt | % {$_.StatusCode}
     IF($denyList -ne $Null){
         Hide-WUUpdate -MicrosoftUpdate -HideStatus:$false -Verbose -Confirm:$false | Out-Null
@@ -226,8 +216,8 @@ Function PSU-denyPatchesLEGACY{
 ##Pulls list of denied patches from the Automate server
 Function PSU-denyPatches{
     Write-Output "===Denied Patches==="
-    $clientID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ClientID | Select -ExpandProperty ClientID
-    $computerID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ID | Select -ExpandProperty ID
+    $clientID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ClientID | Select-Object -ExpandProperty ClientID
+    $computerID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ID | Select-Object -ExpandProperty ID
     $approveList = IWR -Uri "https://$dkbURL/labtech/transfer/patching/$clientID/$computerID/patchApprove.txt" -EA 0
     $approveList = $approveList.Content
     IF(!$approveList){
@@ -235,7 +225,7 @@ Function PSU-denyPatches{
         Break
     }
     ELSE{
-        $pending = Get-WUList -MicrosoftUpdate | Select -ExpandProperty KB
+        $pending = Get-WUList -MicrosoftUpdate | Select-Object -ExpandProperty KB
         Hide-WUUpdate -MicrosoftUpdate -HideStatus:$false -Verbose -Confirm:$false | Out-Null
         Hide-WUUpdate -Category Driver -Confirm:$false
         ForEach($kb in $pending){
@@ -275,18 +265,13 @@ Function PSU-repairUpdates{
     ##Delete Windows Updates downloads & cache
     Get-ChildItem "C:\Windows\system32\catroot2\*" -Recurse | Remove-Item -Force -EA 0 -Confirm:$False -Recurse
     Get-ChildItem "C:\Windows\SoftwareDistribution\*" -Recurse | Remove-Item -Force -EA 0 -Confirm:$False -Recurse
-    Remove-Item "$env:ALLUSERSPROFILE\Application Data\Microsoft\Downloader" -Force -EA 0 -Recurse
 
     ##Reset proxy
     netsh winhttp reset proxy
 
-    ##Flush DNS
-    ipoconfig /flushdns
-
     ##Reset BITS
     sc.exe sdset bits "D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;AU)(A;;CCLCSWRPWPDTLOCRRC;;;PU)"
     sc.exe sdset wuauserv "D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;AU)(A;;CCLCSWRPWPDTLOCRRC;;;PU)"
-    bitsadmin /Reset /AllUsers
 
     ##Re-register DLLs
     regsvr32.exe atl.dll /s
@@ -329,11 +314,6 @@ Function PSU-repairUpdates{
     ##Reset winsock
     netsh winsock reset
 
-    ##Resync all updates pending with Windows Update
-    wuauclt /resetauthorization
-    wuauclt /detectnow
-    wuauclt /reportnow
-
     ##Start update services
     Start-Service bits
     Start-Service cryptsvc
@@ -355,7 +335,7 @@ Function PSU-getScore{
     $ErrorActionPreference = 'SilentlyContinue'
 
     ##Start WUAUSERV if it's not started
-    $wuStatus = Get-Service wuauserv | Select -Expand Status | Out-Null
+    $wuStatus = Get-Service wuauserv | Select-Object -Expand Status | Out-Null
     IF ($wuStatus -eq 'Stopped'){
         Start-Service wuauserv
     }
@@ -411,21 +391,21 @@ Function PSU-rebootStatus{
     }
 }
 
-##Output list of installed updates into a CSV at C:\Windows\LTSVc\Patching\[companyid]-[computerid]-[computername]-installedUpdates.csv
+##Output list of installed updates into a CSV at $patchComponentDir\[companyid]-[computerid]-[computername]-installedUpdates.csv
 Function PSU-installedToCSV{
     Write-Output "===Exporting Installed Patches==="
     $computerName = $env:computername
-    $clientID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ClientID | Select -ExpandProperty ClientID
-    $computerID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ID | Select -ExpandProperty ID
-    $dirTest = Test-Path "C:\Windows\LTSvc\Patching"
+    $clientID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ClientID | Select-Object -ExpandProperty ClientID
+    $computerID = Get-ItemProperty -Path "HKLM:\SOFTWARE\LabTech\Service" -Name ID | Select-Object -ExpandProperty ID
+    $dirTest = Test-Path "$patchComponentDir"
     IF(!$dirTest){
-        New-Item "C:\Windows\LTSvc\Patching" -Type Directory | Out-Null
+        New-Item "$patchComponentDir" -Type Directory | Out-Null
     }
-    $csvTest = Test-Path "C:\Windows\LTSvc\Patching\$computerName-$clientID-$computerID-installedPatches.csv" -PathType Leaf
+    $csvTest = Test-Path "$patchComponentDir\$computerName-$clientID-$computerID-installedPatches.csv" -PathType Leaf
     IF($csvTest){
-      Remove-Item -Path "C:\Windows\LTSvc\Patching\$computerName-$clientID-$computerID-installedPatches.csv" -Force -EA 0
+      Remove-Item -Path "$patchComponentDir\$computerName-$clientID-$computerID-installedPatches.csv" -Force -EA 0
     }
-    PSU-getInstalled | Select-Object ComputerName, Status, KB, Title | Export-Csv -Path "C:\Windows\LTSvc\Patching\$computerName-$clientID-$computerID-installedPatches.csv" -Encoding ascii -NoTypeInformation
+    PSU-getInstalled | Select-Object ComputerName, Status, KB, Title | Export-Csv -Path "$patchComponentDir\$computerName-$clientID-$computerID-installedPatches.csv" -Encoding ascii -NoTypeInformation
 }
 
 ##Run all tasks to complete a successful patching session
